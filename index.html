@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Blockmap builds clear, useful tools for navigating complex places.">
+  <title>blockmap — map the in-between</title>
+  <style>
+    :root {
+      --ink: #101314;
+      --paper: #e8eee8;
+      --muted: #8e9990;
+      --acid: #c8ff3d;
+      --line: rgba(232, 238, 232, .14);
+      --card: rgba(232, 238, 232, .06);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--paper);
+      background: var(--ink);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      letter-spacing: .01em;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .shell {
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(232, 238, 232, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 238, 232, .045) 1px, transparent 1px),
+        radial-gradient(circle at 76% 17%, rgba(200, 255, 61, .12), transparent 25rem),
+        var(--ink);
+      background-size: 64px 64px, 64px 64px, auto, auto;
+    }
+
+    .shell::before {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+      opacity: .25;
+      background: repeating-linear-gradient(115deg, transparent 0 90px, rgba(200, 255, 61, .08) 91px 92px, transparent 93px 180px);
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .brand-mark {
+      width: 12px;
+      height: 12px;
+      background: var(--acid);
+      box-shadow: 5px 5px 0 rgba(200, 255, 61, .3);
+    }
+
+    nav { display: flex; gap: 28px; }
+
+    nav a {
+      color: var(--muted);
+      font-size: 12px;
+      transition: color .2s ease;
+    }
+
+    nav a:hover, nav a:focus-visible { color: var(--acid); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+      gap: 8vw;
+      align-items: center;
+      min-height: min(700px, calc(100vh - 85px));
+      padding: 72px 0 110px;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 28px;
+      color: var(--acid);
+      font-size: 11px;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 28px;
+      height: 1px;
+      content: "";
+      background: var(--acid);
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 0;
+      font-size: clamp(54px, 9vw, 116px);
+      font-weight: 700;
+      letter-spacing: -.075em;
+      line-height: .88;
+    }
+
+    h1 span { color: var(--acid); }
+
+    .intro {
+      max-width: 410px;
+      margin: 34px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 36px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 17px;
+      border: 1px solid var(--acid);
+      color: var(--ink);
+      background: var(--acid);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .button:hover, .button:focus-visible {
+      color: var(--acid);
+      background: transparent;
+      transform: translateY(-3px);
+    }
+
+    .button.secondary {
+      color: var(--paper);
+      border-color: var(--line);
+      background: transparent;
+    }
+
+    .button.secondary:hover, .button.secondary:focus-visible {
+      color: var(--acid);
+      border-color: var(--acid);
+    }
+
+    .button b { font-size: 16px; font-weight: 400; }
+
+    .map-panel {
+      position: relative;
+      aspect-ratio: 1 / 1.08;
+      max-width: 440px;
+      justify-self: end;
+      border: 1px solid var(--line);
+      background: rgba(16, 19, 20, .65);
+      animation: rise .8s ease both;
+    }
+
+    .map-panel::before, .map-panel::after {
+      position: absolute;
+      content: "";
+      background: var(--line);
+    }
+
+    .map-panel::before { top: 50%; left: 0; width: 100%; height: 1px; }
+    .map-panel::after { top: 0; left: 50%; width: 1px; height: 100%; }
+
+    .map-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .route {
+      position: absolute;
+      inset: 17% 13% 14% 18%;
+      overflow: visible;
+    }
+
+    .route path {
+      fill: none;
+      stroke: var(--acid);
+      stroke-width: 2;
+      stroke-dasharray: 8 8;
+      animation: dash 8s linear infinite;
+    }
+
+    .pin { fill: var(--acid); }
+    .pin-ring { fill: none; stroke: var(--acid); stroke-width: 1; opacity: .6; }
+
+    .panel-data {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      left: 16px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .panel-data strong { color: var(--acid); font-weight: 400; }
+
+    .strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat { padding: 24px 0; }
+    .stat + .stat { padding-left: 28px; border-left: 1px solid var(--line); }
+    .stat strong { display: block; margin-bottom: 6px; color: var(--acid); font-size: 24px; font-weight: 400; }
+    .stat span { color: var(--muted); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 30px 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    footer a:hover { color: var(--acid); }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes dash { to { stroke-dashoffset: -120; } }
+
+    @media (max-width: 720px) {
+      .wrap { width: min(100% - 32px, 560px); }
+      header { padding: 22px 0; }
+      nav { gap: 15px; }
+      .hero { display: block; min-height: auto; padding: 72px 0 70px; }
+      h1 { font-size: clamp(58px, 17vw, 92px); }
+      .map-panel { width: min(100%, 380px); margin: 64px 0 0 auto; }
+      .strip { grid-template-columns: 1fr; }
+      .stat + .stat { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
+      footer { gap: 20px; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="wrap">
+      <header>
+        <a class="brand" href="/" aria-label="blockmap home"><span class="brand-mark" aria-hidden="true"></span>blockmap</a>
+        <nav aria-label="Main navigation">
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero" id="about">
+          <div>
+            <p class="eyebrow">Independent digital studio</p>
+            <h1>Map the<br><span>in-between.</span></h1>
+            <p class="intro">blockmap makes the complicated feel navigable. Tools, maps, and small experiments for people who like to see how things connect.</p>
+            <div class="actions">
+              <a class="button" href="#work">View the work <b aria-hidden="true">&#8599;</b></a>
+              <a class="button secondary" href="mailto:hello@map.roweb.cn">Say hello <b aria-hidden="true">&#8594;</b></a>
+            </div>
+          </div>
+
+          <div class="map-panel" aria-label="Abstract route map illustration">
+            <span class="map-label">Signal / 01</span>
+            <svg class="route" viewBox="0 0 300 360" role="img" aria-label="A bright route connecting three points">
+              <path d="M20 310 C 38 238, 98 279, 112 208 S 170 91, 276 64"></path>
+              <circle class="pin-ring" cx="20" cy="310" r="8"></circle>
+              <circle class="pin" cx="20" cy="310" r="3"></circle>
+              <circle class="pin-ring" cx="112" cy="208" r="8"></circle>
+              <circle class="pin" cx="112" cy="208" r="3"></circle>
+              <circle class="pin-ring" cx="276" cy="64" r="8"></circle>
+              <circle class="pin" cx="276" cy="64" r="3"></circle>
+            </svg>
+            <div class="panel-data"><span>Lat 31.23 / Lon 121.47</span><strong>Live</strong></div>
+          </div>
+        </section>
+
+        <section class="strip" id="work" aria-label="What we do">
+          <div class="stat"><strong>01</strong><span>Useful interfaces</span></div>
+          <div class="stat"><strong>02</strong><span>Open experiments</span></div>
+          <div class="stat"><strong>03</strong><span>Clear directions</span></div>
+        </section>
+      </main>
+
+      <footer id="contact">
+        <span>&copy; 2026 blockmap</span>
+        <a href="mailto:hello@map.roweb.cn">hello@map.roweb.cn &#8599;</a>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
